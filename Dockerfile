@@ -1,14 +1,15 @@
 # Use Node.js LTS (Long Term Support) image as base
-FROM --platform=linux/amd64 node:20-slim
+FROM node:20-slim
 
 # Set working directory in container
 WORKDIR /app
 
 # Copy package.json and package-lock.json (if exists)
-COPY package*.json ./
+COPY package.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies while explicitly avoiding platform-specific builds
+RUN npm install --no-optional --legacy-peer-deps --omit=optional
+RUN npm install @rollup/rollup-linux-arm64-gnu
 
 # Copy the rest of the application code
 COPY . .
