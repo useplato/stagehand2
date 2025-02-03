@@ -9,7 +9,7 @@ COPY package.json ./
 
 # Install dependencies while explicitly avoiding platform-specific builds
 RUN npm install --no-optional --legacy-peer-deps --omit=optional
-RUN npm install @rollup/rollup-linux-arm64-gnu
+RUN npm install @rollup/rollup-linux-x64-gnu
 
 # Copy the rest of the application code
 COPY . .
