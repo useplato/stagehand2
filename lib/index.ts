@@ -43,12 +43,22 @@ const BROWSERBASE_REGION_DOMAIN = {
 async function getBrowser(
   apiKey: string | undefined,
   projectId: string | undefined,
-  env: "LOCAL" | "BROWSERBASE" = "LOCAL",
+  env: "LOCAL" | "BROWSERBASE" | "REMOTE" = "LOCAL",
   headless: boolean = false,
   logger: (message: LogLine) => void,
   browserbaseSessionCreateParams?: Browserbase.Sessions.SessionCreateParams,
   browserbaseSessionID?: string,
+  cdpUrl?: string,
 ): Promise<BrowserResult> {
+  if (env === "REMOTE") {
+    if (!cdpUrl) {
+      throw new Error("CDP_URL is required for REMOTE env.");
+    }
+    const browser = await chromium.connectOverCDP(cdpUrl);
+    const context = browser.contexts()[0];
+    return { browser, context, env: "REMOTE" };
+  }
+
   if (env === "BROWSERBASE") {
     if (!apiKey) {
       logger({
@@ -308,7 +318,7 @@ const defaultLogger = async (logLine: LogLine) => {
 export class Stagehand {
   private stagehandPage!: StagehandPage;
   private stagehandContext!: StagehandContext;
-  private intEnv: "LOCAL" | "BROWSERBASE";
+  private intEnv: "LOCAL" | "BROWSERBASE" | "REMOTE";
 
   public browserbaseSessionID?: string;
   public readonly domSettleTimeoutMs: number;
@@ -317,6 +327,7 @@ export class Stagehand {
   public verbose: 0 | 1 | 2;
   public llmProvider: LLMProvider;
   public enableCaching: boolean;
+  public cdpUrl?: string;
 
   private apiKey: string | undefined;
   private projectId: string | undefined;
@@ -346,6 +357,7 @@ export class Stagehand {
       modelName,
       modelClientOptions,
       systemPrompt,
+      cdpUrl,
     }: ConstructorParams = {
       env: "BROWSERBASE",
     },
@@ -380,6 +392,7 @@ export class Stagehand {
     this.browserbaseSessionCreateParams = browserbaseSessionCreateParams;
     this.browserbaseSessionID = browserbaseSessionID;
     this.userProvidedInstructions = systemPrompt;
+    this.cdpUrl = cdpUrl;
   }
 
   public get logger(): (logLine: LogLine) => void {
@@ -399,11 +412,11 @@ export class Stagehand {
     return this.stagehandPage.page;
   }
 
-  public get env(): "LOCAL" | "BROWSERBASE" {
+  public get env(): "LOCAL" | "BROWSERBASE" | "REMOTE" {
     if (this.intEnv === "BROWSERBASE" && this.apiKey && this.projectId) {
       return "BROWSERBASE";
     }
-    return "LOCAL";
+    return this.intEnv;
   }
 
   public get context(): BrowserContext {
@@ -433,6 +446,7 @@ export class Stagehand {
         this.logger,
         this.browserbaseSessionCreateParams,
         this.browserbaseSessionID,
+        this.cdpUrl,
       ).catch((e) => {
         console.error("Error in init:", e);
         const br: BrowserResult = {
