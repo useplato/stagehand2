@@ -30,10 +30,17 @@ import { EvalFunction, SummaryResult, Testcase } from "@/types/evals";
 import { EvalLogger } from "./logger";
 import { AvailableModel } from "@/dist";
 import dotenv from "dotenv";
+import Plato from "plato-cli";
+
 dotenv.config();
 
 const MAX_CONCURRENCY = 20;
-const TRIAL_COUNT = 5;
+const TRIAL_COUNT = 1;
+
+const plato = new Plato({
+  apiKey: process.env.PLATO_API_KEY,
+  version: "1.0.0",
+});
 
 /**
  * generateSummary:
@@ -227,6 +234,7 @@ const generateFilteredTestcases = (): Testcase[] => {
             logger,
             useTextExtract,
             useAccessibilityTree,
+            plato,
           });
 
           // Log result to console
