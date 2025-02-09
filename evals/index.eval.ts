@@ -37,11 +37,6 @@ dotenv.config();
 const MAX_CONCURRENCY = 20;
 const TRIAL_COUNT = 1;
 
-const plato = new Plato({
-  apiKey: process.env.PLATO_API_KEY,
-  version: "1.0.0",
-});
-
 /**
  * generateSummary:
  * After all evaluations have finished, aggregate the results into a summary.
@@ -197,6 +192,8 @@ const generateFilteredTestcases = (): Testcase[] => {
     category: filterByCategory || undefined,
     environment: env,
   });
+
+  const plato = await Plato.init(process.env.PLATO_API_KEY!, "1.0.0");
 
   // Determine braintrust project name to use (stagehand in CI, stagehand-dev otherwise)
   const braintrustProjectName =
