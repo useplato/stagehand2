@@ -6,10 +6,28 @@ export const imdb_movie_details: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    countries: z
+      .array(z.string())
+      .describe("List of countries with the most ratings"),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "imdb_movie_details",
+    prompt: "Extract the list of countries with the most ratings.",
+    startUrl: "https://www.imdb.com/title/tt0111161/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -23,13 +41,13 @@ export const imdb_movie_details: EvalFunction = async ({
 
   const movieDetails = await stagehand.page.extract({
     instruction: "Extract the list of countries with the most ratings.",
-    schema: z.object({
-      countries: z
-        .array(z.string())
-        .describe("List of countries with the most ratings"),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

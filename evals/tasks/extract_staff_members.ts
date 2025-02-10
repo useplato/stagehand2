@@ -6,11 +6,33 @@ export const extract_staff_members: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    staff_members: z.array(
+      z.object({
+        name: z.string(),
+        job_title: z.string(),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_staff_members",
+    prompt:
+      "Extract a list of staff members on this page, with their name and their job title.",
+    startUrl: "https://panamcs-static-site.surge.sh/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -20,19 +42,17 @@ export const extract_staff_members: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "extract a list of staff members on this page, with their name and their job title",
-    schema: z.object({
-      staff_members: z.array(
-        z.object({
-          name: z.string(),
-          job_title: z.string(),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
   });
 
   const staff_members = result.staff_members;
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
+
   await stagehand.close();
 
   const expectedLength = 49;
@@ -95,6 +115,10 @@ export const extract_staff_members: EvalFunction = async ({
       },
     });
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
 
     return {
@@ -128,6 +152,10 @@ export const extract_staff_members: EvalFunction = async ({
       },
     });
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
 
     return {
@@ -138,6 +166,10 @@ export const extract_staff_members: EvalFunction = async ({
       sessionUrl,
     };
   }
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
 
   await stagehand.close();
 

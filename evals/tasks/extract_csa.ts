@@ -6,10 +6,35 @@ export const extract_csa: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    publications: z.array(
+      z.object({
+        publication_date: z.string(),
+        session_type: z.string(),
+        publication_type: z.string(),
+        annotation: z.string(),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_csa",
+    prompt:
+      "Extract all the publications on the page including the publication date, session type, publication type, and annotation",
+    startUrl:
+      "https://clerk.assembly.ca.gov/weekly-histories?from_date=&to_date=2025-01-09",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,18 +47,13 @@ export const extract_csa: EvalFunction = async ({
   const result = await page.extract({
     instruction:
       "Extract all the publications on the page including the publication date, session type, publication type, and annotation",
-    schema: z.object({
-      publications: z.array(
-        z.object({
-          publication_date: z.string(),
-          session_type: z.string(),
-          publication_type: z.string(),
-          annotation: z.string(),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

@@ -6,10 +6,30 @@ export const extract_jstor_news: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    reports: z.array(
+      z.object({
+        report_name: z.string(),
+        publish_date: z.string(),
+      }),
+    ),
+  });
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_jstor_news",
+    prompt: "Extract ALL the news report titles and their dates.",
+    startUrl: "http://jstor-eval.surge.sh",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,20 +42,13 @@ export const extract_jstor_news: EvalFunction = async ({
 
   const result = await stagehand.page.extract({
     instruction: "Extract ALL the news report titles and their dates.",
-    schema: z.object({
-      reports: z.array(
-        z.object({
-          report_name: z
-            .string()
-            .describe("The name or title of the news report."),
-          publish_date: z
-            .string()
-            .describe("The date the news report was published."),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

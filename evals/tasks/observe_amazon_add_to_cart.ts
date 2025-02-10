@@ -1,14 +1,27 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
 import { performPlaywrightMethod } from "@/lib/a11y/utils";
+import { z } from "zod";
 
 export const observe_amazon_add_to_cart: EvalFunction = async ({
   modelName,
   logger,
+  plato,
 }) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "observe_amazon_add_to_cart",
+    prompt: "Observe the page for the text 'Add to Cart'",
+    startUrl:
+      "https://www.amazon.com/Laptop-MacBook-Surface-Water-Resistant-Accessories/dp/B0D5M4H5CD",
+    outputSchema: z.any(),
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -62,6 +75,10 @@ export const observe_amazon_add_to_cart: EvalFunction = async ({
 
   const currentUrl = stagehand.page.url();
   const expectedUrlPrefix = "https://www.amazon.com/ap/signin";
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
 
   await stagehand.close();
 

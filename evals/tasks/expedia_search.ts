@@ -1,10 +1,26 @@
 import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
+import { z } from "zod";
 
-export const expedia_search: EvalFunction = async ({ modelName, logger }) => {
+export const expedia_search: EvalFunction = async ({
+  modelName,
+  logger,
+  plato,
+}) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "expedia_search",
+    prompt: "Search for flights from San Francisco to Toronto",
+    startUrl: "https://www.expedia.com/flights",
+    outputSchema: z.any(),
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

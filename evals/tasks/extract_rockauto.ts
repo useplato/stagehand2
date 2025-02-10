@@ -6,11 +6,33 @@ export const extract_rockauto: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    coolant_products: z.array(
+      z.object({
+        part_number: z.string(),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_rockauto",
+    prompt:
+      "Extract the part number of all the coolant and antifreeze products in the 'economy' category. Do not include the manufacturer name.",
+    startUrl:
+      "https://www.rockauto.com/en/catalog/alpine,1974,a310,1.6l+l4,1436055,cooling+system,coolant+/+antifreeze,11393",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 10000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,16 +44,14 @@ export const extract_rockauto: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract the part number of all the coolant and antifreeze products in the 'economy' category. Do not include the manufacturer name.",
-    schema: z.object({
-      coolant_products: z.array(
-        z.object({
-          part_number: z.string(),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
     domSettleTimeoutMs: 10000,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

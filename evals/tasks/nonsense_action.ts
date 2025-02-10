@@ -1,10 +1,25 @@
 import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
+import { z } from "zod";
 
-export const nonsense_action: EvalFunction = async ({ modelName, logger }) => {
+export const nonsense_action: EvalFunction = async ({
+  modelName,
+  logger,
+  plato,
+}) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "nonsense_action",
+    prompt: "Click on the first banana",
+    startUrl: "https://www.homedepot.com/",
+    outputSchema: z.any(),
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

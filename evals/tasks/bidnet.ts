@@ -1,10 +1,20 @@
 import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
-
-export const bidnet: EvalFunction = async ({ modelName, logger }) => {
+import { z } from "zod";
+export const bidnet: EvalFunction = async ({ modelName, logger, plato }) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "bidnet",
+    prompt: "Click on the 'Construction' keyword",
+    startUrl: "https://www.bidnetdirect.com/",
+    outputSchema: z.any(),
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -18,6 +28,10 @@ export const bidnet: EvalFunction = async ({ modelName, logger }) => {
   const expectedUrl =
     "https://www.bidnetdirect.com/public/solicitations/open?keywords=Construction";
   const currentUrl = stagehand.page.url();
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
 
   await stagehand.close();
 

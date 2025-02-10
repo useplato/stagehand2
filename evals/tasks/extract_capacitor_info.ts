@@ -7,10 +7,29 @@ export const extract_capacitor_info: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    ECCN_code: z.string(),
+    RoHS_Status: z.string(),
+    Impedance: z.string(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_capacitor_info",
+    prompt: "Extract the ECCN Code, RoHS Status, and Impedance.",
+    startUrl:
+      "https://www.jakelectronics.com/productdetail/panasonicelectroniccomponents-eeufm1a472l-2937406",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -21,13 +40,13 @@ export const extract_capacitor_info: EvalFunction = async ({
 
   const result = await stagehand.page.extract({
     instruction: "Extract the ECCN Code, RoHS Status, and Impedance.",
-    schema: z.object({
-      ECCN_code: z.string(),
-      RoHS_Status: z.string(),
-      Impedance: z.string(),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

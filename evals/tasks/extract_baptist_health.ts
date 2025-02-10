@@ -7,10 +7,30 @@ export const extract_baptist_health: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    address: z.string(),
+    phone: z.string(),
+    fax: z.string(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_baptist_health",
+    prompt:
+      "Extract the address, phone number, and fax number of the healthcare location.",
+    startUrl:
+      "https://www.baptistfirst.org/location/baptist-health-ent-partners",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,13 +42,13 @@ export const extract_baptist_health: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract the address, phone number, and fax number of the healthcare location.",
-    schema: z.object({
-      address: z.string(),
-      phone: z.string(),
-      fax: z.string(),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

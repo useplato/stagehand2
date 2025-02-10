@@ -7,10 +7,30 @@ export const extract_resistor_info: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    moq: z.string(),
+    tolerance_percentage: z.string(),
+    ohmic_value: z.string(),
+    operating_temperature_range: z.string(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_resistor_info",
+    prompt:
+      "Extract the MOQ, tolerance percentage, ohmic value, and operating temperature range of the resistor.",
+    startUrl: "https://www.seielect.com/?stockcheck=ASR1JA330R",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -20,14 +40,13 @@ export const extract_resistor_info: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract the MOQ, tolerance percentage, ohmic value, and operating temperature range of the resistor.",
-    schema: z.object({
-      moq: z.string(),
-      tolerance_percentage: z.string(),
-      ohmic_value: z.string(),
-      operating_temperature_range: z.string(),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

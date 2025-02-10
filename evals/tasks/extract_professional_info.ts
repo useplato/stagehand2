@@ -7,10 +7,30 @@ export const extract_professional_info: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    practices: z.array(z.string()),
+    phone: z.string(),
+    fax: z.string(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_professional_info",
+    prompt:
+      "Extract the list of Practices, phone number, and fax number of the professional.",
+    startUrl:
+      "https://www.paulweiss.com/professionals/partners-and-counsel/brian-bolin",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,13 +42,13 @@ export const extract_professional_info: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract the list of Practices, phone number, and fax number of the professional.",
-    schema: z.object({
-      practices: z.array(z.string()),
-      phone: z.string(),
-      fax: z.string(),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

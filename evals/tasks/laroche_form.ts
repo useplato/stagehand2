@@ -1,10 +1,26 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
+import { z } from "zod";
+export const laroche_form: EvalFunction = async ({
+  modelName,
+  logger,
+  plato,
+}) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "laroche_form",
+    prompt: "Fill out the form on the page",
+    startUrl:
+      "https://www.laroche-posay.us/offers/anthelios-melt-in-milk-sunscreen-sample.html",
+    outputSchema: z.any(),
+  });
 
-export const laroche_form: EvalFunction = async ({ modelName, logger }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -53,6 +69,10 @@ export const laroche_form: EvalFunction = async ({ modelName, logger }) => {
       logs: logger.getLogs(),
     };
   } finally {
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
   }
 };

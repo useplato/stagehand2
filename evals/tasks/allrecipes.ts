@@ -52,6 +52,10 @@ export const allrecipes: EvalFunction = async ({
     useTextExtract,
   });
 
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
+
   await stagehand.close();
 
   const { title, total_ratings } = recipeDetails;

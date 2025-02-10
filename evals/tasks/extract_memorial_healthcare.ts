@@ -7,11 +7,32 @@ export const extract_memorial_healthcare: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    health_centers: z.array(
+      z.object({
+        name: z.string(),
+        phone_number: z.string(),
+        address: z.string(),
+      }),
+    ),
+  });
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_memorial_healthcare",
+    prompt:
+      "Extract a list of the first three healthcare centers on this page, with their name, full address, and phone number",
+    startUrl: "https://www.mycmh.org/locations/",
+    outputSchema,
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -21,17 +42,13 @@ export const extract_memorial_healthcare: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "extract a list of the first three healthcare centers on this page, with their name, full address, and phone number",
-    schema: z.object({
-      health_centers: z.array(
-        z.object({
-          name: z.string(),
-          phone_number: z.string(),
-          address: z.string(),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

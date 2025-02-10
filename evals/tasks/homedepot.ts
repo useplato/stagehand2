@@ -6,11 +6,31 @@ export const homedepot: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    productSpecs: z.array(
+      z.object({
+        burnerBTU: z.string().describe("Primary Burner BTU exact value"),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "homedepot",
+    prompt: "Extract the Primary exact Burner BTU of the product",
+    startUrl: "https://www.homedepot.com/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 60_000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -24,15 +44,7 @@ export const homedepot: EvalFunction = async ({
 
     const productSpecs = await stagehand.page.extract({
       instruction: "Extract the Primary exact Burner BTU of the product",
-      schema: z.object({
-        productSpecs: z
-          .array(
-            z.object({
-              burnerBTU: z.string().describe("Primary Burner BTU exact value"),
-            }),
-          )
-          .describe("Gas grill Primary Burner BTU exact value"),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -53,6 +65,10 @@ export const homedepot: EvalFunction = async ({
       !productSpecs.productSpecs ||
       productSpecs.productSpecs.length !== 1
     ) {
+      await stagehand.context.pages().forEach(async (page) => {
+        await page.close();
+      });
+
       await stagehand.close();
 
       return {
@@ -67,6 +83,10 @@ export const homedepot: EvalFunction = async ({
     const hasFourZerosAndOne4 =
       (productSpecs.productSpecs[0].burnerBTU.match(/0/g) || []).length === 4 &&
       (productSpecs.productSpecs[0].burnerBTU.match(/4/g) || []).length === 1;
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 
@@ -91,6 +111,10 @@ export const homedepot: EvalFunction = async ({
           type: "string",
         },
       },
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();

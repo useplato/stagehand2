@@ -6,10 +6,32 @@ export const extract_github_commits: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    commits: z.array(
+      z.object({
+        commit_message: z.string(),
+        commit_url: z.string(),
+        commit_hash: z.string(),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_github_commits",
+    prompt: "Extract the last 20 commits",
+    startUrl: "https://github.com/facebook/react",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -23,15 +45,7 @@ export const extract_github_commits: EvalFunction = async ({
     });
     const { commits } = await stagehand.page.extract({
       instruction: "Extract last 20 commits",
-      schema: z.object({
-        commits: z.array(
-          z.object({
-            commit_message: z.string(),
-            commit_url: z.string(),
-            commit_hash: z.string(),
-          }),
-        ),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -47,6 +61,10 @@ export const extract_github_commits: EvalFunction = async ({
       },
     });
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
 
     return {
@@ -58,6 +76,10 @@ export const extract_github_commits: EvalFunction = async ({
     };
   } catch (error) {
     console.error("Error or timeout occurred:", error);
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 

@@ -7,11 +7,31 @@ export const extract_nhl_stats: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    name: z.string(),
+    num_goals: z.string(),
+    team: z.string(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_nhl_stats",
+    prompt:
+      "Extract the name of the goal scoring leader, their number of goals they scored, and the team they played for.",
+    startUrl:
+      "https://www.hockeydb.com/ihdb/stats/top_league.php?lid=nhl1927&sid=1990",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 4000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -26,13 +46,13 @@ export const extract_nhl_stats: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract the name of the goal scoring leader, their number of goals they scored, and the team they played for.",
-    schema: z.object({
-      name: z.string(),
-      num_goals: z.string(),
-      team: z.string(),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

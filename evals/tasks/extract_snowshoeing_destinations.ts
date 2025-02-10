@@ -6,10 +6,35 @@ export const extract_snowshoeing_destinations: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    snowshoeing_regions: z.array(
+      z.object({
+        region_name: z.string().describe("The name of the snowshoeing region"),
+        trails: z
+          .array(z.string())
+          .describe("The list of trails available in this region."),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_snowshoeing_destinations",
+    prompt:
+      "Extract all the snowshoeing regions and the names of the trails within each region.",
+    startUrl:
+      "https://www.cbisland.com/blog/10-snowshoeing-adventures-on-cape-breton-island/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -24,22 +49,7 @@ export const extract_snowshoeing_destinations: EvalFunction = async ({
     const snowshoeing_regions = await stagehand.page.extract({
       instruction:
         "Extract all the snowshoeing regions and the names of the trails within each region.",
-      schema: z.object({
-        snowshoeing_regions: z.array(
-          z.object({
-            region_name: z
-              .string()
-              .describe("The name of the snowshoeing region"),
-            trails: z
-              .array(
-                z.object({
-                  trail_name: z.string().describe("The name of the trail"),
-                }),
-              )
-              .describe("The list of trails available in this region."),
-          }),
-        ),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -53,6 +63,10 @@ export const extract_snowshoeing_destinations: EvalFunction = async ({
           type: "object",
         },
       },
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();

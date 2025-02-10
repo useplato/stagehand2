@@ -1,10 +1,21 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
+import { z } from "zod";
+export const apple: EvalFunction = async ({ modelName, logger, plato }) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "apple",
+    prompt: "Search for 'iphone 16 pro' using the search bar",
+    startUrl: "https://www.apple.com/iphone-16-pro/",
+    outputSchema: z.any(),
+  });
 
-export const apple: EvalFunction = async ({ modelName, logger }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -30,6 +41,10 @@ export const apple: EvalFunction = async ({ modelName, logger }) => {
     'text="Good News. Your iPhone 13 mini qualifies for credit."',
   );
   const isVisible = await successMessageLocator.isVisible();
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
 
   await stagehand.close();
 

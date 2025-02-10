@@ -6,11 +6,32 @@ export const extract_aigrant_companies: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    companies: z.array(
+      z.object({
+        company: z.string(),
+        batch: z.string(),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_aigrant_companies",
+    prompt:
+      "Extract all companies that received the AI grant and group them with their batch numbers as an array of objects. Each object should contain the company name and its corresponding batch number.",
+    startUrl: "https://aigrant.com/",
+    outputSchema,
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -31,6 +52,9 @@ export const extract_aigrant_companies: EvalFunction = async ({
     useTextExtract,
   });
 
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
   await stagehand.close();
   const companies = companyList.companies;
   const expectedLength = 91;

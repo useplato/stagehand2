@@ -6,10 +6,35 @@ export const extract_area_codes: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    primary_center_list: z.array(
+      z.object({
+        zone_name: z.string().describe("The name of the Zone"),
+        primary_center_name: z
+          .string()
+          .describe("The name of the Primary Center"),
+        area_code: z.string().describe("The area code for the Primary Center"),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_area_codes",
+    prompt: "Extract all the area codes for the primary centers in Nigeria.",
+    startUrl:
+      "https://www.ncc.gov.ng/technical-regulation/standards/numbering#area-codes-by-zone-primary-centre",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -23,29 +48,13 @@ export const extract_area_codes: EvalFunction = async ({
   const result = await stagehand.page.extract({
     instruction:
       "Extract ALL the Primary Center names and their corresponding Area Code, and the name of their corresponding Zone.",
-    schema: z.object({
-      primary_center_list: z.array(
-        z.object({
-          zone_name: z
-            .string()
-            .describe(
-              "The name of the Zone that the Primary Center is in. For example, 'North Central Zone'.",
-            ),
-          primary_center_name: z
-            .string()
-            .describe(
-              "The name of the Primary Center. I.e., this is the name of the city or town.",
-            ),
-          area_code: z
-            .string()
-            .describe(
-              "The area code for the Primary Center. This will either be 2 or 3 digits.",
-            ),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

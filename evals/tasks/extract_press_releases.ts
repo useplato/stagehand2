@@ -7,16 +7,9 @@ export const extract_press_releases: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    domSettleTimeoutMs: 3000,
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
-  const schema = z.object({
+  const outputSchema = z.object({
     items: z.array(
       z.object({
         title: z.string().describe("The title of the press release"),
@@ -26,8 +19,26 @@ export const extract_press_releases: EvalFunction = async ({
       }),
     ),
   });
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_press_releases",
+    prompt:
+      "Extract the title and corresponding publish date of EACH AND EVERY press releases on this page. DO NOT MISS ANY PRESS RELEASES.",
+    startUrl: "https://dummy-press-releases.surge.sh/news",
+    outputSchema,
+  });
+  const { stagehand, initResponse } = await initStagehand({
+    modelName,
+    logger,
+    domSettleTimeoutMs: 3000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
+  });
 
-  type PressRelease = z.infer<typeof schema>["items"][number];
+  const { debugUrl, sessionUrl } = initResponse;
+
+  type PressRelease = z.infer<typeof outputSchema>["items"][number];
 
   try {
     await stagehand.page.goto("https://dummy-press-releases.surge.sh/news", {
@@ -38,13 +49,17 @@ export const extract_press_releases: EvalFunction = async ({
     const rawResult = await stagehand.page.extract({
       instruction:
         "extract the title and corresponding publish date of EACH AND EVERY press releases on this page. DO NOT MISS ANY PRESS RELEASES.",
-      schema,
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
 
-    const parsed = schema.parse(rawResult);
+    const parsed = outputSchema.parse(rawResult);
     const { items } = parsed;
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 
@@ -128,6 +143,9 @@ export const extract_press_releases: EvalFunction = async ({
       sessionUrl,
     };
   } finally {
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
     await stagehand.context.close();
   }
 };

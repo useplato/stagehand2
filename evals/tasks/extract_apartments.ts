@@ -6,11 +6,32 @@ export const extract_apartments: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    listings: z.array(
+      z.object({
+        price: z.string().describe("The price of the listing"),
+        trails: z.string().describe("The address of the listing"),
+      }),
+    ),
+  });
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_apartments",
+    prompt:
+      "Extract all the apartment listings with their prices and their addresses.",
+    startUrl: "https://www.apartments.com/san-francisco-ca/2-bedrooms/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -21,18 +42,14 @@ export const extract_apartments: EvalFunction = async ({
   const apartment_listings = await stagehand.page.extract({
     instruction:
       "Extract all the apartment listings with their prices and their addresses.",
-    schema: z.object({
-      listings: z.array(
-        z.object({
-          price: z.string().describe("The price of the listing"),
-          trails: z.string().describe("The address of the listing"),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
   });
 
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
   await stagehand.close();
   const listings = apartment_listings.listings;
   const expectedLength = 40;

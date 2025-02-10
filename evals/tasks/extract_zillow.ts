@@ -6,13 +6,31 @@ export const extract_zillow: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    listings: z.array(
+      z.object({
+        price: z.string().describe("The price of the home"),
+        trails: z.string().describe("The address of the home"),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_zillow",
+    prompt: "Extract all the home prices and addresses on the page.",
+    startUrl: "https://zillow-eval.surge.sh/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
     configOverrides: {
-      debugDom: false,
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
     },
   });
 
@@ -24,16 +42,13 @@ export const extract_zillow: EvalFunction = async ({
   const real_estate_listings = await stagehand.page.extract({
     instruction:
       "Extract EACH AND EVERY HOME PRICE AND ADDRESS ON THE PAGE. DO NOT MISS ANY OF THEM.",
-    schema: z.object({
-      listings: z.array(
-        z.object({
-          price: z.string().describe("The price of the home"),
-          trails: z.string().describe("The address of the home"),
-        }),
-      ),
-    }),
+    schema: outputSchema,
     modelName,
     useTextExtract,
+  });
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
   });
 
   await stagehand.close();

@@ -6,10 +6,33 @@ export const arxiv: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    papers: z
+      .array(
+        z.object({
+          title: z.string().describe("the title of the paper"),
+          link: z.string().describe("the link to the paper").nullable(),
+        }),
+      )
+      .describe("list of papers"),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "arxiv",
+    prompt: "Search for papers about web agents with multimodal models",
+    startUrl: "https://arxiv.org/search/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -23,16 +46,7 @@ export const arxiv: EvalFunction = async ({
 
     const paper_links = await stagehand.page.extract({
       instruction: "extract the titles and links for two papers",
-      schema: z.object({
-        papers: z
-          .array(
-            z.object({
-              title: z.string().describe("the title of the paper"),
-              link: z.string().describe("the link to the paper").nullable(),
-            }),
-          )
-          .describe("list of papers"),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -42,6 +56,9 @@ export const arxiv: EvalFunction = async ({
       !paper_links.papers ||
       paper_links.papers.length === 0
     ) {
+      await stagehand.context.pages().forEach(async (page) => {
+        await page.close();
+      });
       await stagehand.close();
 
       return {
@@ -104,6 +121,9 @@ export const arxiv: EvalFunction = async ({
     }
 
     if (!papers || papers.length === 0) {
+      await stagehand.context.pages().forEach(async (page) => {
+        await page.close();
+      });
       await stagehand.close();
 
       return {
@@ -130,6 +150,9 @@ export const arxiv: EvalFunction = async ({
         },
       });
 
+      await stagehand.context.pages().forEach(async (page) => {
+        await page.close();
+      });
       await stagehand.close();
 
       return {
@@ -155,6 +178,9 @@ export const arxiv: EvalFunction = async ({
           },
         });
 
+        await stagehand.context.pages().forEach(async (page) => {
+          await page.close();
+        });
         await stagehand.close();
 
         return {
@@ -167,6 +193,9 @@ export const arxiv: EvalFunction = async ({
       }
     }
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
     await stagehand.close();
 
     return {
@@ -192,6 +221,9 @@ export const arxiv: EvalFunction = async ({
       },
     });
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
     await stagehand.close();
 
     return {

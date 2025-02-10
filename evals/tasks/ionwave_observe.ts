@@ -1,10 +1,26 @@
 import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
+import { z } from "zod";
 
-export const ionwave_observe: EvalFunction = async ({ modelName, logger }) => {
+export const ionwave_observe: EvalFunction = async ({
+  modelName,
+  logger,
+  plato,
+}) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "ionwave_observe",
+    prompt: "Observe the page for the text 'El Paso, Texas'",
+    startUrl: "https://elpasotexas.ionwave.net/Login.aspx",
+    outputSchema: z.any(),
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -51,6 +67,10 @@ export const ionwave_observe: EvalFunction = async ({ modelName, logger }) => {
       continue;
     }
   }
+
+  await stagehand.context.pages().forEach(async (page) => {
+    await page.close();
+  });
 
   await stagehand.close();
 

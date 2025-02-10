@@ -6,10 +6,26 @@ export const extract_github_stars: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    stars: z.number().describe("the number of stars for the project"),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_github_stars",
+    prompt: "Extract the number of stars for the project",
+    startUrl: "https://github.com/facebook/react",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -19,9 +35,7 @@ export const extract_github_stars: EvalFunction = async ({
 
     const { stars } = await stagehand.page.extract({
       instruction: "Extract the number of stars for the project",
-      schema: z.object({
-        stars: z.number().describe("the number of stars for the project"),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -49,6 +63,10 @@ export const extract_github_stars: EvalFunction = async ({
     };
   } catch (error) {
     console.error("Error or timeout occurred:", error);
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 

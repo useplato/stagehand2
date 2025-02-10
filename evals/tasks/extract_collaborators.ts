@@ -6,10 +6,32 @@ export const extract_collaborators: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    contributors: z.array(
+      z.object({
+        github_username: z
+          .string()
+          .describe("the github username of the contributor"),
+        information: z.string().describe("number of commits contributed"),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_collaborators",
+    prompt: "Extract the top 20 contributors of this repository",
+    startUrl: "https://github.com/facebook/react",
+    outputSchema,
+  });
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -22,18 +44,13 @@ export const extract_collaborators: EvalFunction = async ({
 
     const { contributors } = await stagehand.page.extract({
       instruction: "Extract top 20 contributors of this repository",
-      schema: z.object({
-        contributors: z.array(
-          z.object({
-            github_username: z
-              .string()
-              .describe("the github username of the contributor"),
-            information: z.string().describe("number of commits contributed"),
-          }),
-        ),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();
@@ -47,6 +64,10 @@ export const extract_collaborators: EvalFunction = async ({
     };
   } catch (error) {
     console.error("Error or timeout occurred:", error);
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 

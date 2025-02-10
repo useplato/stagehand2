@@ -6,10 +6,28 @@ export const combination_sauce: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    usernames: z.array(z.string()).describe("the accepted usernames"),
+    password: z.string().describe("the password for login"),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "combination_sauce",
+    prompt:
+      "Enter the username 'standard_user' and password 'secret_sauce' to login to the Sauce Demo website",
+    startUrl: "https://www.saucedemo.com/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -19,10 +37,7 @@ export const combination_sauce: EvalFunction = async ({
 
     const { usernames, password } = await stagehand.page.extract({
       instruction: "extract the accepted usernames and the password for login",
-      schema: z.object({
-        usernames: z.array(z.string()).describe("the accepted usernames"),
-        password: z.string().describe("the password for login"),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -48,6 +63,10 @@ export const combination_sauce: EvalFunction = async ({
 
     const url = await stagehand.page.url();
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
 
     const usernamesCheck = usernames.length === 6;
@@ -62,6 +81,10 @@ export const combination_sauce: EvalFunction = async ({
     };
   } catch (error) {
     console.error("Error or timeout occurred:", error);
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 

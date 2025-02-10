@@ -6,10 +6,30 @@ export const extract_partners: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    partners: z.array(
+      z.object({
+        partner_category: z.string().describe("The partner category"),
+      }),
+    ),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_partners",
+    prompt: "Extract all of the partner categories on the page.",
+    startUrl: "https://ramp.com",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -63,6 +83,10 @@ export const extract_partners: EvalFunction = async ({
       foundPartners.includes(partner.toLowerCase()),
     );
 
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
+
     await stagehand.close();
 
     return {
@@ -86,6 +110,10 @@ export const extract_partners: EvalFunction = async ({
           type: "string",
         },
       },
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();

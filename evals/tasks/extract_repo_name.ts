@@ -1,13 +1,26 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
+import { z } from "zod";
 
 export const extract_repo_name: EvalFunction = async ({
   modelName,
   logger,
+  plato,
 }) => {
+  const platoSim = await plato.startSimulationSession({
+    name: "extract_repo_name",
+    prompt: "Extract the name of the Github repository",
+    startUrl: "https://github.com/facebook/react",
+    outputSchema: z.any(),
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -28,6 +41,10 @@ export const extract_repo_name: EvalFunction = async ({
           type: "object",
         },
       },
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();

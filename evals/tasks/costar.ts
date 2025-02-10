@@ -6,10 +6,26 @@ export const costar: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  plato,
 }) => {
+  const outputSchema = z.object({
+    title: z.string().describe("the title of the article").nullable(),
+  });
+
+  const platoSim = await plato.startSimulationSession({
+    name: "costar",
+    prompt: "Click on the first article",
+    startUrl: "https://www.costar.com/",
+    outputSchema,
+  });
+
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      cdpUrl: platoSim.cdpUrl,
+      env: "REMOTE",
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;
@@ -30,9 +46,7 @@ export const costar: EvalFunction = async ({
 
     const articleTitle = await stagehand.page.extract({
       instruction: "extract the title of the article",
-      schema: z.object({
-        title: z.string().describe("the title of the article").nullable(),
-      }),
+      schema: outputSchema,
       modelName,
       useTextExtract,
     });
@@ -51,6 +65,10 @@ export const costar: EvalFunction = async ({
     // Check if the title is more than 5 characters
     const isTitleValid =
       articleTitle.title !== null && articleTitle.title.length > 5;
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
+    });
 
     await stagehand.close();
 
@@ -75,6 +93,10 @@ export const costar: EvalFunction = async ({
           type: "string",
         },
       },
+    });
+
+    await stagehand.context.pages().forEach(async (page) => {
+      await page.close();
     });
 
     await stagehand.close();
