@@ -35,7 +35,7 @@ import Plato from "plato-cli";
 dotenv.config();
 
 const MAX_CONCURRENCY = 20;
-const TRIAL_COUNT = 2;
+const TRIAL_COUNT = 1;
 
 const USE_PLATO = true;
 
@@ -314,6 +314,7 @@ const generateFilteredTestcases = (): Testcase[] => {
 
     // Generate and write the summary
     await generateSummary(summaryResults, experimentName);
+    process.exit(0);
   } catch (error) {
     console.error("Error during evaluation run:", error);
     process.exit(1);
