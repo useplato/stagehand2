@@ -3,14 +3,13 @@ import type { EvalLogger } from "../evals/logger";
 import type { AvailableModel } from "../types/model";
 import type { LogLine } from "../types/log";
 import type { EvalCase } from "braintrust";
-import Plato from "plato-cli";
 
 export type EvalFunction = (args: {
   modelName: AvailableModel;
   logger: EvalLogger;
   useTextExtract: boolean;
   useAccessibilityTree: boolean;
-  plato?: Plato;
+  configOverrides?: Record<string, unknown>;
 }) => Promise<{
   _success: boolean;
   logs: LogLine[];

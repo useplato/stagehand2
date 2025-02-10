@@ -5,10 +5,14 @@ import { performPlaywrightMethod } from "@/lib/a11y/utils";
 export const observe_simple_google_search: EvalFunction = async ({
   modelName,
   logger,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

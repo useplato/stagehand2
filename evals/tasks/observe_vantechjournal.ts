@@ -4,10 +4,14 @@ import { EvalFunction } from "@/types/evals";
 export const observe_vantechjournal: EvalFunction = async ({
   modelName,
   logger,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

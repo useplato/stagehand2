@@ -1,10 +1,17 @@
 import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const nonsense_action: EvalFunction = async ({ modelName, logger }) => {
+export const nonsense_action: EvalFunction = async ({
+  modelName,
+  logger,
+  configOverrides,
+}) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

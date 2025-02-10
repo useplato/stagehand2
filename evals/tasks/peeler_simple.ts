@@ -6,10 +6,17 @@ const env: "BROWSERBASE" | "LOCAL" =
     ? "BROWSERBASE"
     : "LOCAL";
 
-export const peeler_simple: EvalFunction = async ({ modelName, logger }) => {
+export const peeler_simple: EvalFunction = async ({
+  modelName,
+  logger,
+  configOverrides,
+}) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

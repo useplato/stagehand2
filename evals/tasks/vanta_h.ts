@@ -1,10 +1,17 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
 
-export const vanta_h: EvalFunction = async ({ modelName, logger }) => {
+export const vanta_h: EvalFunction = async ({
+  modelName,
+  logger,
+  configOverrides,
+}) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

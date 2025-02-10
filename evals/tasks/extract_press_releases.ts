@@ -7,11 +7,15 @@ export const extract_press_releases: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 3000,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

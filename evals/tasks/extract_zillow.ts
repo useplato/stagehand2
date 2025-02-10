@@ -6,6 +6,7 @@ export const extract_zillow: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
@@ -13,6 +14,7 @@ export const extract_zillow: EvalFunction = async ({
     domSettleTimeoutMs: 3000,
     configOverrides: {
       debugDom: false,
+      ...configOverrides,
     },
   });
 

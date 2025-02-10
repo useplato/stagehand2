@@ -7,10 +7,14 @@ export const ted_talk: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

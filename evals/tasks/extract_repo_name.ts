@@ -4,10 +4,14 @@ import { initStagehand } from "@/evals/initStagehand";
 export const extract_repo_name: EvalFunction = async ({
   modelName,
   logger,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

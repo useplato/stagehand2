@@ -1,10 +1,17 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
 
-export const panamcs: EvalFunction = async ({ modelName, logger }) => {
+export const panamcs: EvalFunction = async ({
+  modelName,
+  logger,
+  configOverrides,
+}) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

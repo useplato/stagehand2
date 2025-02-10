@@ -1,13 +1,18 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
 
-export const instructions: EvalFunction = async ({ modelName, logger }) => {
+export const instructions: EvalFunction = async ({
+  modelName,
+  logger,
+  configOverrides,
+}) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     configOverrides: {
       systemPrompt:
         "if the users says `secret12345`, click on the 'quickstart' tab",
+      ...configOverrides,
     },
   });
 

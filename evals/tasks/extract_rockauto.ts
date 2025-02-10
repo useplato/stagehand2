@@ -6,11 +6,15 @@ export const extract_rockauto: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
+  configOverrides,
 }) => {
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     domSettleTimeoutMs: 10000,
+    configOverrides: {
+      ...configOverrides,
+    },
   });
 
   const { debugUrl, sessionUrl } = initResponse;

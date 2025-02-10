@@ -6,26 +6,13 @@ export const allrecipes: EvalFunction = async ({
   modelName,
   logger,
   useTextExtract,
-  plato,
+  configOverrides,
 }) => {
-  const platoSim = await plato.startSimulationSession({
-    name: "allrecipes",
-    prompt: "Search for 'chocolate chip cookies' using the search bar",
-    startUrl: "https://www.allrecipes.com/",
-    outputSchema: z.object({
-      title: z.string().describe("Title of the recipe"),
-      total_ratings: z
-        .string()
-        .describe("Total number of ratings for the recipe"),
-    }),
-  });
-
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     configOverrides: {
-      cdpUrl: platoSim.cdpUrl,
-      env: "REMOTE",
+      ...configOverrides,
     },
   });
 

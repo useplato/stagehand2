@@ -1,27 +1,16 @@
 import { EvalFunction } from "@/types/evals";
 import { initStagehand } from "@/evals/initStagehand";
-import { z } from "zod";
 
 export const amazon_add_to_cart: EvalFunction = async ({
   modelName,
   logger,
-  plato,
+  configOverrides,
 }) => {
-  const platoSim = await plato.startSimulationSession({
-    name: "amazon_add_to_cart",
-    prompt: "Add a MacBook to the cart",
-    startUrl: "https://www.amazon.com/",
-    outputSchema: z.object({
-      success: z.boolean().describe("Whether the action was successful"),
-    }),
-  });
-
   const { stagehand, initResponse } = await initStagehand({
     modelName,
     logger,
     configOverrides: {
-      cdpUrl: platoSim.cdpUrl,
-      env: "REMOTE",
+      ...configOverrides,
     },
   });
 
