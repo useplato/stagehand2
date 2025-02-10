@@ -34,7 +34,7 @@ import Plato from "plato-cli";
 
 dotenv.config();
 
-const MAX_CONCURRENCY = 5;
+const MAX_CONCURRENCY = 20;
 const TRIAL_COUNT = 1;
 
 const USE_PLATO = true;

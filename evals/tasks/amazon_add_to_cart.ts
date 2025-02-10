@@ -36,11 +36,6 @@ export const amazon_add_to_cart: EvalFunction = async ({
   const currentUrl = stagehand.page.url();
   const expectedUrlPrefix = "https://www.amazon.com/ap/signin";
 
-  // close all pages
-  await stagehand.context.pages().forEach(async (page) => {
-    await page.close();
-  });
-
   await stagehand.close();
 
   return {

@@ -56,6 +56,15 @@ async function getBrowser(
     }
     const browser = await chromium.connectOverCDP(cdpUrl);
     const context = browser.contexts()[0];
+    const originalClose = context.close.bind(context);
+
+    // ensure pages get closed for remote session
+    context.close = async () => {
+      for (const page of context.pages()) {
+        await page.close();
+      }
+      await originalClose();
+    };
     return { browser, context, env: "REMOTE" };
   }
 
