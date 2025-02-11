@@ -269,27 +269,23 @@ const generateFilteredTestcases = (): Testcase[] => {
 
   try {
     if (USE_PLATO) {
-      evalResult = await Plato.Eval(
-        braintrustProjectName,
-        {
-          name: experimentName,
-          data: generateFilteredTestcases().map((t) => ({
-            ...t,
-            prompt: t.description || t.name,
-          })),
-          task: async (input, simulatorSession) => {
-            const result = await runTask(input.input, {
-              env: "REMOTE",
-              cdpUrl: simulatorSession.cdpUrl,
-            });
-            return result;
-          },
-          customScores: [],
-          maxConcurrency: MAX_CONCURRENCY,
-          trialCount: TRIAL_COUNT,
+      evalResult = await Plato.Eval(braintrustProjectName, {
+        name: experimentName,
+        data: generateFilteredTestcases().map((t) => ({
+          ...t,
+          prompt: t.description || t.name,
+        })),
+        task: async (input, simulatorSession) => {
+          const result = await runTask(input.input, {
+            env: "REMOTE",
+            cdpUrl: simulatorSession.cdpUrl,
+          });
+          return result;
         },
-        { baseUrl: "http://localhost:25565" },
-      );
+        customScores: [],
+        maxConcurrency: MAX_CONCURRENCY,
+        trialCount: TRIAL_COUNT,
+      });
     } else {
       // Run the evaluations with the braintrust Eval function
       evalResult = await Eval(braintrustProjectName, {
