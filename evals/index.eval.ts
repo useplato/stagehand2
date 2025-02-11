@@ -35,7 +35,7 @@ import Plato from "plato-cli";
 dotenv.config();
 
 const MAX_CONCURRENCY = 20;
-const TRIAL_COUNT = 1;
+const TRIAL_COUNT = 5;
 
 const USE_PLATO = true;
 
@@ -137,7 +137,12 @@ const generateFilteredTestcases = (): Testcase[] => {
   // Create a list of all testcases for each model-task combination.
   let allTestcases = MODELS.flatMap((model) =>
     Object.keys(tasksByName).map((testName) => ({
-      input: { name: testName, modelName: model },
+      input: {
+        name: testName,
+        modelName: model,
+      },
+      description: tasksByName[testName].description,
+      startUrl: tasksByName[testName].startUrl,
       name: testName,
       tags: [model, testName],
       metadata: {
@@ -165,7 +170,7 @@ const generateFilteredTestcases = (): Testcase[] => {
   }
 
   // If running in BROWSERBASE environment, exclude tasks that are not applicable.
-  if (env === "BROWSERBASE") {
+  if (env === "BROWSERBASE" || USE_PLATO) {
     allTestcases = allTestcases.filter(
       (testcase) => !["peeler_simple", "stock_x"].includes(testcase.name),
     );
@@ -264,23 +269,27 @@ const generateFilteredTestcases = (): Testcase[] => {
 
   try {
     if (USE_PLATO) {
-      evalResult = await Plato.Eval(braintrustProjectName, {
-        name: experimentName,
-        data: generateFilteredTestcases().map((t) => ({
-          ...t,
-          prompt: t.name,
-        })),
-        task: async (input, simulatorSession) => {
-          const result = await runTask(input.input, {
-            env: "REMOTE",
-            cdpUrl: simulatorSession.cdpUrl,
-          });
-          return result;
+      evalResult = await Plato.Eval(
+        braintrustProjectName,
+        {
+          name: experimentName,
+          data: generateFilteredTestcases().map((t) => ({
+            ...t,
+            prompt: t.description || t.name,
+          })),
+          task: async (input, simulatorSession) => {
+            const result = await runTask(input.input, {
+              env: "REMOTE",
+              cdpUrl: simulatorSession.cdpUrl,
+            });
+            return result;
+          },
+          customScores: [],
+          maxConcurrency: MAX_CONCURRENCY,
+          trialCount: TRIAL_COUNT,
         },
-        customScores: [],
-        maxConcurrency: MAX_CONCURRENCY,
-        trialCount: TRIAL_COUNT,
-      });
+        { baseUrl: "http://localhost:25565" },
+      );
     } else {
       // Run the evaluations with the braintrust Eval function
       evalResult = await Eval(braintrustProjectName, {

@@ -42,6 +42,8 @@ export interface Testcase
   input: EvalInput;
   name: string;
   tags: string[];
+  description?: string;
+  startUrl?: string;
   metadata: { model: AvailableModel; test: string };
   expected: unknown;
 }
