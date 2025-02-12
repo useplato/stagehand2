@@ -29,11 +29,12 @@ import { EvalLogger } from "./logger";
 import dotenv from "dotenv";
 import Plato from "plato-cli";
 import { initStagehand } from "./initStagehand";
+import { errorMatch, exactMatch } from "./scoring";
 
 dotenv.config();
 
 const MAX_CONCURRENCY = 20;
-const TRIAL_COUNT = 5;
+const TRIAL_COUNT = 1;
 
 /**
  * generateSummary:
@@ -172,7 +173,10 @@ const generateFilteredTestcases = (): Testcase[] => {
     );
   }
 
-  return allTestcases;
+  return allTestcases.map((t) => ({
+    ...t,
+    prompt: t.description || t.name,
+  }));
 };
 
 /**
@@ -201,95 +205,96 @@ const generateFilteredTestcases = (): Testcase[] => {
     process.env.CI === "true" ? "stagehand" : "stagehand-dev";
 
   try {
-    const evalResult = await Plato.Eval(platoAgentName, {
-      name: experimentName,
-      data: generateFilteredTestcases().map((t) => ({
-        ...t,
-        prompt: t.description || t.name,
-      })),
-      task: async (input, plato) => {
-        const logger = new EvalLogger();
-        try {
-          // Dynamically import the task based on its name
-          const taskModulePath = path.join(
-            __dirname,
-            "tasks",
-            `${input.name}.ts`,
-          );
-          const taskModule = (await import(taskModulePath)) as {
-            [key: string]: EvalFunction;
-          };
-          const taskFunction = taskModule[input.name];
-
-          if (typeof taskFunction !== "function") {
-            throw new Error(
-              `Task function for ${input.name} is not a function`,
+    const evalResult = await Plato.Eval(
+      platoAgentName,
+      {
+        name: experimentName,
+        data: generateFilteredTestcases(),
+        task: async (input, startSimulation) => {
+          const logger = new EvalLogger();
+          try {
+            // Dynamically import the task based on its name
+            const taskModulePath = path.join(
+              __dirname,
+              "tasks",
+              `${input.name}.ts`,
             );
-          }
+            const taskModule = (await import(taskModulePath)) as {
+              [key: string]: EvalFunction;
+            };
+            const taskFunction = taskModule[input.name];
 
-          console.log("initializing stagehand for", input);
-          const { stagehand, initResponse } = await initStagehand({
-            modelName: input.input.modelName,
-            logger,
-          });
+            if (typeof taskFunction !== "function") {
+              throw new Error(
+                `Task function for ${input.name} is not a function`,
+              );
+            }
 
-          const { debugUrl, sessionUrl, connectUrl } = initResponse;
+            console.log("initializing stagehand for", input);
+            const { stagehand, initResponse } = await initStagehand({
+              modelName: input.input.modelName,
+              logger,
+            });
 
-          console.log("connecting to", connectUrl);
+            const { debugUrl, sessionUrl, connectUrl } = initResponse;
 
-          const platoSim = await plato.startSimulation(input, {
-            cdpUrl: connectUrl,
-          });
+            console.log("connecting to", connectUrl);
 
-          // Execute the task
-          const result = await taskFunction({
-            platoSim,
-            stagehand,
-            logger,
-            useTextExtract,
-            useAccessibilityTree,
-            modelName: input.modelName,
-          });
+            const platoSim = await startSimulation({
+              cdpUrl: connectUrl,
+            });
 
-          // Log result to console
-          if (result && result._success) {
-            console.log(`✅ ${input.name}: Passed`);
-          } else {
-            console.log(`❌ ${input.name}: Failed`);
-          }
-          return {
-            ...result,
-            debugUrl,
-            sessionUrl,
-          };
-        } catch (error) {
-          // Log any errors that occur during task execution
-          console.error(`❌ ${input.name}: Error - ${error}`);
-          logger.error({
-            message: `Error in task ${input.name}`,
-            level: 0,
-            auxiliary: {
-              error: {
-                value: error.message,
-                type: "object",
+            // Execute the task
+            const result = await taskFunction({
+              platoSim,
+              stagehand,
+              logger,
+              useTextExtract,
+              useAccessibilityTree,
+              modelName: input.modelName,
+            });
+
+            // Log result to console
+            if (result && result._success) {
+              console.log(`✅ ${input.name}: Passed`);
+            } else {
+              console.log(`❌ ${input.name}: Failed`);
+            }
+            return {
+              ...result,
+              debugUrl,
+              sessionUrl,
+            };
+          } catch (error) {
+            // Log any errors that occur during task execution
+            console.error(`❌ ${input.name}: Error - ${error}`);
+            logger.error({
+              message: `Error in task ${input.name}`,
+              level: 0,
+              auxiliary: {
+                error: {
+                  value: error.message,
+                  type: "object",
+                },
+                trace: {
+                  value: error.stack,
+                  type: "string",
+                },
               },
-              trace: {
-                value: error.stack,
-                type: "string",
-              },
-            },
-          });
-          return {
-            _success: false,
-            error: JSON.parse(JSON.stringify(error, null, 2)),
-            logs: logger.getLogs(),
-          };
-        }
+            });
+            return {
+              _success: false,
+              error: JSON.parse(JSON.stringify(error, null, 2)),
+              logs: logger.getLogs(),
+            };
+          }
+        },
+        customScores: [exactMatch, errorMatch],
+        maxConcurrency: MAX_CONCURRENCY,
+        trialCount: TRIAL_COUNT,
       },
-      customScores: [],
-      maxConcurrency: MAX_CONCURRENCY,
-      trialCount: TRIAL_COUNT,
-    });
+      { baseUrl: "http://localhost:25565" },
+    );
 
     // Map results to the SummaryResult format
     const summaryResults: SummaryResult[] = (evalResult?.results || []).map(

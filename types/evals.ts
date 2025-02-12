@@ -2,8 +2,7 @@ import { z } from "zod";
 import type { EvalLogger } from "../evals/logger";
 import type { AvailableModel } from "../types/model";
 import type { LogLine } from "../types/log";
-import type { EvalCase } from "braintrust";
-import { PlatoSession } from "plato-cli";
+import { PlatoSession, TestCase } from "plato-cli";
 import { Stagehand } from "@/dist";
 
 export type EvalFunction = (args: {
@@ -34,12 +33,7 @@ export interface EvalInput {
   modelName: AvailableModel;
 }
 
-export interface Testcase
-  extends EvalCase<
-    EvalInput,
-    unknown,
-    { model: AvailableModel; test: string }
-  > {
+export interface Testcase extends TestCase {
   input: EvalInput;
   name: string;
   tags: string[];
