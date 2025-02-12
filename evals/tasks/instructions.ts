@@ -1,23 +1,6 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
-export const instructions: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      systemPrompt:
-        "if the users says `secret12345`, click on the 'quickstart' tab",
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const instructions: EvalFunction = async ({ stagehand, logger }) => {
   try {
     const page = stagehand.page;
 
@@ -38,8 +21,6 @@ export const instructions: EvalFunction = async ({
 
     return {
       _success: isCorrectUrl,
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   } catch (error) {
@@ -50,8 +31,6 @@ export const instructions: EvalFunction = async ({
     return {
       _success: false,
       error: JSON.parse(JSON.stringify(error, null, 2)),
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   }

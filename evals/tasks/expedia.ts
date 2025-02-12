@@ -1,21 +1,6 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
-export const expedia: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const expedia: EvalFunction = async ({ stagehand, logger }) => {
   try {
     await stagehand.page.goto("https://www.expedia.com/flights");
     await stagehand.page.act(
@@ -30,8 +15,6 @@ export const expedia: EvalFunction = async ({
     return {
       _success: url.startsWith("https://www.expedia.com/Checkout/"),
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   } catch (error) {
     logger.error({
@@ -46,8 +29,6 @@ export const expedia: EvalFunction = async ({
     return {
       _success: false,
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   } finally {
     await stagehand.close();

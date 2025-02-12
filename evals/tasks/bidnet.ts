@@ -1,21 +1,6 @@
-import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const bidnet: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const bidnet: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://www.bidnetdirect.com/");
 
   await stagehand.page.act({
@@ -31,8 +16,6 @@ export const bidnet: EvalFunction = async ({
   return {
     _success: currentUrl.startsWith(expectedUrl),
     currentUrl,
-    debugUrl,
-    sessionUrl,
     logs: logger.getLogs(),
   };
 };

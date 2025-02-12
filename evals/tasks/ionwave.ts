@@ -1,21 +1,6 @@
-import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const ionwave: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const ionwave: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://elpasotexas.ionwave.net/Login.aspx");
 
   await stagehand.page.act({
@@ -31,8 +16,6 @@ export const ionwave: EvalFunction = async ({
   return {
     _success: currentUrl.startsWith(expectedUrl),
     currentUrl,
-    debugUrl,
-    sessionUrl,
     logs: logger.getLogs(),
   };
 };

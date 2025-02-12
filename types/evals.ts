@@ -3,18 +3,19 @@ import type { EvalLogger } from "../evals/logger";
 import type { AvailableModel } from "../types/model";
 import type { LogLine } from "../types/log";
 import type { EvalCase } from "braintrust";
+import { PlatoSession } from "plato-cli";
+import { Stagehand } from "@/dist";
 
 export type EvalFunction = (args: {
-  modelName: AvailableModel;
   logger: EvalLogger;
+  platoSim: PlatoSession;
+  stagehand: Stagehand;
+  modelName: AvailableModel;
   useTextExtract: boolean;
   useAccessibilityTree: boolean;
-  configOverrides?: Record<string, unknown>;
 }) => Promise<{
   _success: boolean;
   logs: LogLine[];
-  debugUrl: string;
-  sessionUrl: string;
   error?: unknown;
 }>;
 

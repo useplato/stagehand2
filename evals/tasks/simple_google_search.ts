@@ -1,21 +1,9 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
 export const simple_google_search: EvalFunction = async ({
-  modelName,
+  stagehand,
   logger,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto("https://www.google.com");
 
   await stagehand.page.act({
@@ -30,8 +18,6 @@ export const simple_google_search: EvalFunction = async ({
   return {
     _success: currentUrl.startsWith(expectedUrl),
     currentUrl,
-    debugUrl,
-    sessionUrl,
     logs: logger.getLogs(),
   };
 };

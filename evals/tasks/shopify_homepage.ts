@@ -1,21 +1,6 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
-export const shopify_homepage: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const shopify_homepage: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://www.shopify.com/");
 
   const observations = await stagehand.page.observe({ onlyVisible: true });
@@ -25,8 +10,7 @@ export const shopify_homepage: EvalFunction = async ({
     return {
       _success: false,
       observations,
-      debugUrl,
-      sessionUrl,
+
       logs: logger.getLogs(),
     };
   }
@@ -65,8 +49,7 @@ export const shopify_homepage: EvalFunction = async ({
     _success: foundMatch,
     expected: expectedResult,
     observations,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };

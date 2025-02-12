@@ -1,24 +1,13 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 import { z } from "zod";
 import { compareStrings } from "@/evals/utils";
 
 export const extract_public_notices: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.init();
   await stagehand.page.goto(
     "https://www.sars.gov.za/legal-counsel/secondary-legislation/public-notices/",
@@ -89,8 +78,6 @@ export const extract_public_notices: EvalFunction = async ({
       _success: false,
       error: "Incorrect number of public notices extracted",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
   const firstItemMatches =
@@ -129,8 +116,6 @@ export const extract_public_notices: EvalFunction = async ({
       _success: false,
       error: "First public notice extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -170,15 +155,11 @@ export const extract_public_notices: EvalFunction = async ({
       _success: false,
       error: "Last public notice extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
   return {
     _success: true,
     logs: logger.getLogs(),
-    debugUrl,
-    sessionUrl,
   };
 };

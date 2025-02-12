@@ -1,23 +1,12 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 import { z } from "zod";
 
 export const extract_collaborators: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   try {
     await stagehand.page.goto("https://github.com/facebook/react");
     await stagehand.page.act({
@@ -45,8 +34,6 @@ export const extract_collaborators: EvalFunction = async ({
     return {
       _success: contributors.length === 20,
       contributors,
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   } catch (error) {
@@ -57,8 +44,6 @@ export const extract_collaborators: EvalFunction = async ({
     return {
       _success: false,
       error: JSON.parse(JSON.stringify(error, null, 2)),
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   }

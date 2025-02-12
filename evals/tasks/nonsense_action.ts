@@ -1,21 +1,6 @@
-import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const nonsense_action: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const nonsense_action: EvalFunction = async ({ stagehand, logger }) => {
   try {
     await stagehand.page.goto("https://www.homedepot.com/");
 
@@ -36,8 +21,6 @@ export const nonsense_action: EvalFunction = async ({
 
     return {
       _success: isResultCorrect,
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   } catch (error) {
@@ -45,8 +28,6 @@ export const nonsense_action: EvalFunction = async ({
     return {
       _success: false,
       error: JSON.parse(JSON.stringify(error, null, 2)),
-      debugUrl,
-      sessionUrl,
       logs: logger.getLogs(),
     };
   } finally {

@@ -1,24 +1,14 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
+
 import { normalizeString } from "@/evals/utils";
 import { z } from "zod";
 
 export const extract_professional_info: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto(
     "https://www.paulweiss.com/professionals/partners-and-counsel/brian-bolin",
   );
@@ -71,8 +61,6 @@ export const extract_professional_info: EvalFunction = async ({
       _success: false,
       error: "Practices extracted do not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -95,8 +83,6 @@ export const extract_professional_info: EvalFunction = async ({
       _success: false,
       error: "Phone number extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -119,15 +105,11 @@ export const extract_professional_info: EvalFunction = async ({
       _success: false,
       error: "Fax number extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
   return {
     _success: true,
     logs: logger.getLogs(),
-    debugUrl,
-    sessionUrl,
   };
 };

@@ -1,23 +1,13 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
+
 import { z } from "zod";
 
 export const imdb_movie_details: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto("https://www.imdb.com/title/tt0111161/", {
     waitUntil: "domcontentloaded",
   });
@@ -66,8 +56,6 @@ export const imdb_movie_details: EvalFunction = async ({
       _success: false,
       error: "Incorrect number of countries extracted",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -95,8 +83,6 @@ export const imdb_movie_details: EvalFunction = async ({
       _success: false,
       error: "Extracted countries do not match expected countries",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -104,7 +90,5 @@ export const imdb_movie_details: EvalFunction = async ({
     _success: true,
     countries: movieDetails.countries,
     logs: logger.getLogs(),
-    debugUrl,
-    sessionUrl,
   };
 };

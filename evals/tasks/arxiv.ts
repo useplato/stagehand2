@@ -1,23 +1,12 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 import { z } from "zod";
 
 export const arxiv: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   try {
     await stagehand.page.goto("https://arxiv.org/search/");
 
@@ -51,8 +40,6 @@ export const arxiv: EvalFunction = async ({
       return {
         _success: false,
         logs: logger.getLogs(),
-        debugUrl,
-        sessionUrl,
       };
     }
 
@@ -113,8 +100,6 @@ export const arxiv: EvalFunction = async ({
       return {
         _success: false,
         logs: logger.getLogs(),
-        debugUrl,
-        sessionUrl,
       };
     }
 
@@ -140,8 +125,6 @@ export const arxiv: EvalFunction = async ({
         _success: false,
         error: "Incorrect number of papers extracted",
         logs: logger.getLogs(),
-        debugUrl,
-        sessionUrl,
       };
     }
 
@@ -165,8 +148,6 @@ export const arxiv: EvalFunction = async ({
           _success: false,
           error: "Incomplete paper information",
           logs: logger.getLogs(),
-          debugUrl,
-          sessionUrl,
         };
       }
     }
@@ -177,8 +158,6 @@ export const arxiv: EvalFunction = async ({
       _success: true,
       papers,
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   } catch (error) {
     logger.error({
@@ -201,8 +180,6 @@ export const arxiv: EvalFunction = async ({
     return {
       _success: false,
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 };

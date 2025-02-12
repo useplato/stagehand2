@@ -1,25 +1,13 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 import { z } from "zod";
 import { compareStrings } from "@/evals/utils";
 
 export const extract_memorial_healthcare: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    domSettleTimeoutMs: 3000,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto("https://www.mycmh.org/locations/");
 
   const result = await stagehand.page.extract({
@@ -79,8 +67,6 @@ export const extract_memorial_healthcare: EvalFunction = async ({
       _success: false,
       error: "Incorrect number of health centers extracted",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -113,8 +99,6 @@ export const extract_memorial_healthcare: EvalFunction = async ({
       _success: false,
       error: "One or more health centers have missing fields",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -181,15 +165,11 @@ export const extract_memorial_healthcare: EvalFunction = async ({
       _success: false,
       error: "One or more fields do not match expected values",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
   return {
     _success: true,
     logs: logger.getLogs(),
-    debugUrl,
-    sessionUrl,
   };
 };

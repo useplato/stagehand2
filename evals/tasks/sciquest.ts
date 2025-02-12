@@ -1,23 +1,13 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
+
 import { z } from "zod";
 
 export const sciquest: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto(
     "https://bids.sciquest.com/apps/Router/PublicEvent?tab=PHX_NAV_SourcingAllOpps&CustomerOrg=StateOfUtah",
   );
@@ -66,8 +56,7 @@ export const sciquest: EvalFunction = async ({
       _success: false,
       error: "Total number of results is not within the expected range",
       extractedNumber,
-      debugUrl,
-      sessionUrl,
+
       logs: logger.getLogs(),
     };
   }
@@ -75,8 +64,7 @@ export const sciquest: EvalFunction = async ({
   return {
     _success: true,
     extractedNumber,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };

@@ -43,31 +43,12 @@ const BROWSERBASE_REGION_DOMAIN = {
 async function getBrowser(
   apiKey: string | undefined,
   projectId: string | undefined,
-  env: "LOCAL" | "BROWSERBASE" | "REMOTE" = "LOCAL",
+  env: "LOCAL" | "BROWSERBASE" = "LOCAL",
   headless: boolean = false,
   logger: (message: LogLine) => void,
   browserbaseSessionCreateParams?: Browserbase.Sessions.SessionCreateParams,
   browserbaseSessionID?: string,
-  cdpUrl?: string,
 ): Promise<BrowserResult> {
-  if (env === "REMOTE") {
-    if (!cdpUrl) {
-      throw new Error("CDP_URL is required for REMOTE env.");
-    }
-    const browser = await chromium.connectOverCDP(cdpUrl);
-    const context = browser.contexts()[0];
-    const originalClose = context.close.bind(context);
-
-    // ensure pages get closed for remote session
-    context.close = async () => {
-      for (const page of context.pages()) {
-        await page.close();
-      }
-      await originalClose();
-    };
-    return { browser, context, env: "REMOTE" };
-  }
-
   if (env === "BROWSERBASE") {
     if (!apiKey) {
       logger({
@@ -213,7 +194,15 @@ async function getBrowser(
 
     const context = browser.contexts()[0];
 
-    return { browser, context, debugUrl, sessionUrl, sessionId, env };
+    return {
+      browser,
+      context,
+      debugUrl,
+      sessionUrl,
+      sessionId,
+      env,
+      connectUrl,
+    };
   } else {
     logger({
       category: "init",
@@ -327,7 +316,7 @@ const defaultLogger = async (logLine: LogLine) => {
 export class Stagehand {
   private stagehandPage!: StagehandPage;
   private stagehandContext!: StagehandContext;
-  private intEnv: "LOCAL" | "BROWSERBASE" | "REMOTE";
+  private intEnv: "LOCAL" | "BROWSERBASE";
 
   public browserbaseSessionID?: string;
   public readonly domSettleTimeoutMs: number;
@@ -336,7 +325,6 @@ export class Stagehand {
   public verbose: 0 | 1 | 2;
   public llmProvider: LLMProvider;
   public enableCaching: boolean;
-  public cdpUrl?: string;
 
   private apiKey: string | undefined;
   private projectId: string | undefined;
@@ -366,7 +354,6 @@ export class Stagehand {
       modelName,
       modelClientOptions,
       systemPrompt,
-      cdpUrl,
     }: ConstructorParams = {
       env: "BROWSERBASE",
     },
@@ -401,7 +388,6 @@ export class Stagehand {
     this.browserbaseSessionCreateParams = browserbaseSessionCreateParams;
     this.browserbaseSessionID = browserbaseSessionID;
     this.userProvidedInstructions = systemPrompt;
-    this.cdpUrl = cdpUrl;
   }
 
   public get logger(): (logLine: LogLine) => void {
@@ -421,7 +407,7 @@ export class Stagehand {
     return this.stagehandPage.page;
   }
 
-  public get env(): "LOCAL" | "BROWSERBASE" | "REMOTE" {
+  public get env(): "LOCAL" | "BROWSERBASE" {
     if (this.intEnv === "BROWSERBASE" && this.apiKey && this.projectId) {
       return "BROWSERBASE";
     }
@@ -446,27 +432,34 @@ export class Stagehand {
         "Passing parameters to init() is deprecated and will be removed in the next major version. Use constructor options instead.",
       );
     }
-    const { context, debugUrl, sessionUrl, contextPath, sessionId, env } =
-      await getBrowser(
-        this.apiKey,
-        this.projectId,
-        this.env,
-        this.headless,
-        this.logger,
-        this.browserbaseSessionCreateParams,
-        this.browserbaseSessionID,
-        this.cdpUrl,
-      ).catch((e) => {
-        console.error("Error in init:", e);
-        const br: BrowserResult = {
-          context: undefined,
-          debugUrl: undefined,
-          sessionUrl: undefined,
-          sessionId: undefined,
-          env: this.env,
-        };
-        return br;
-      });
+    const {
+      context,
+      debugUrl,
+      sessionUrl,
+      contextPath,
+      sessionId,
+      env,
+      connectUrl,
+    } = await getBrowser(
+      this.apiKey,
+      this.projectId,
+      this.env,
+      this.headless,
+      this.logger,
+      this.browserbaseSessionCreateParams,
+      this.browserbaseSessionID,
+    ).catch((e) => {
+      console.error("Error in init:", e);
+      const br: BrowserResult = {
+        context: undefined,
+        debugUrl: undefined,
+        sessionUrl: undefined,
+        sessionId: undefined,
+        env: this.env,
+        connectUrl: undefined,
+      };
+      return br;
+    });
     this.intEnv = env;
     this.contextPath = contextPath;
     this.stagehandContext = await StagehandContext.init(context, this);
@@ -490,7 +483,7 @@ export class Stagehand {
 
     this.browserbaseSessionID = sessionId;
 
-    return { debugUrl, sessionUrl, sessionId };
+    return { debugUrl, sessionUrl, sessionId, connectUrl };
   }
 
   /** @deprecated initFromPage is deprecated and will be removed in the next major version. */

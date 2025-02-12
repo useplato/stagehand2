@@ -1,21 +1,6 @@
-import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const observe_github: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const observe_github: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://github.com/numpy/numpy/tree/main/numpy");
 
   const observations = await stagehand.page.observe({
@@ -27,8 +12,7 @@ export const observe_github: EvalFunction = async ({
     return {
       _success: false,
       observations,
-      debugUrl,
-      sessionUrl,
+
       logs: logger.getLogs(),
     };
   }
@@ -91,8 +75,7 @@ export const observe_github: EvalFunction = async ({
     _success: foundMatch,
     matchedLocator,
     observations,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };

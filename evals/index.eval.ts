@@ -17,7 +17,6 @@ import path from "path";
 import process from "process";
 import { env } from "./env";
 import { generateExperimentName } from "./utils";
-import { exactMatch, errorMatch } from "./scoring";
 import { tasksByName, MODELS } from "./taskConfig";
 import {
   filterByCategory,
@@ -25,19 +24,16 @@ import {
   useTextExtract,
   useAccessibilityTree,
 } from "./args";
-import { Eval } from "braintrust";
 import { EvalFunction, SummaryResult, Testcase } from "@/types/evals";
 import { EvalLogger } from "./logger";
-import { AvailableModel } from "@/dist";
 import dotenv from "dotenv";
 import Plato from "plato-cli";
+import { initStagehand } from "./initStagehand";
 
 dotenv.config();
 
 const MAX_CONCURRENCY = 20;
 const TRIAL_COUNT = 5;
-
-const USE_PLATO = true;
 
 /**
  * generateSummary:
@@ -170,7 +166,7 @@ const generateFilteredTestcases = (): Testcase[] => {
   }
 
   // If running in BROWSERBASE environment, exclude tasks that are not applicable.
-  if (env === "BROWSERBASE" || USE_PLATO) {
+  if (env === "BROWSERBASE") {
     allTestcases = allTestcases.filter(
       (testcase) => !["peeler_simple", "stock_x"].includes(testcase.name),
     );
@@ -200,105 +196,100 @@ const generateFilteredTestcases = (): Testcase[] => {
     environment: env,
   });
 
-  let evalResult;
-
-  const runTask = async (
-    input: {
-      name: string;
-      modelName: AvailableModel;
-    },
-    configOverrides?: Record<string, unknown>,
-  ) => {
-    const logger = new EvalLogger();
-    try {
-      // Dynamically import the task based on its name
-      const taskModulePath = path.join(__dirname, "tasks", `${input.name}.ts`);
-      const taskModule = (await import(taskModulePath)) as {
-        [key: string]: EvalFunction;
-      };
-      const taskFunction = taskModule[input.name];
-
-      if (typeof taskFunction !== "function") {
-        throw new Error(`Task function for ${input.name} is not a function`);
-      }
-
-      // Execute the task
-      const result = await taskFunction({
-        modelName: input.modelName,
-        logger,
-        useTextExtract,
-        useAccessibilityTree,
-        configOverrides: configOverrides,
-      });
-
-      // Log result to console
-      if (result && result._success) {
-        console.log(`✅ ${input.name}: Passed`);
-      } else {
-        console.log(`❌ ${input.name}: Failed`);
-      }
-      return result;
-    } catch (error) {
-      // Log any errors that occur during task execution
-      console.error(`❌ ${input.name}: Error - ${error}`);
-      logger.error({
-        message: `Error in task ${input.name}`,
-        level: 0,
-        auxiliary: {
-          error: {
-            value: error.message,
-            type: "object",
-          },
-          trace: {
-            value: error.stack,
-            type: "string",
-          },
-        },
-      });
-      return {
-        _success: false,
-        error: JSON.parse(JSON.stringify(error, null, 2)),
-        logs: logger.getLogs(),
-      };
-    }
-  };
-
   // Determine braintrust project name to use (stagehand in CI, stagehand-dev otherwise)
-  const braintrustProjectName =
+  const platoAgentName =
     process.env.CI === "true" ? "stagehand" : "stagehand-dev";
 
   try {
-    if (USE_PLATO) {
-      evalResult = await Plato.Eval(braintrustProjectName, {
-        name: experimentName,
-        data: generateFilteredTestcases().map((t) => ({
-          ...t,
-          prompt: t.description || t.name,
-        })),
-        task: async (input, simulatorSession) => {
-          const result = await runTask(input.input, {
-            env: "REMOTE",
-            cdpUrl: simulatorSession.cdpUrl,
+    const evalResult = await Plato.Eval(platoAgentName, {
+      name: experimentName,
+      data: generateFilteredTestcases().map((t) => ({
+        ...t,
+        prompt: t.description || t.name,
+      })),
+      task: async (input, plato) => {
+        const logger = new EvalLogger();
+        try {
+          // Dynamically import the task based on its name
+          const taskModulePath = path.join(
+            __dirname,
+            "tasks",
+            `${input.name}.ts`,
+          );
+          const taskModule = (await import(taskModulePath)) as {
+            [key: string]: EvalFunction;
+          };
+          const taskFunction = taskModule[input.name];
+
+          if (typeof taskFunction !== "function") {
+            throw new Error(
+              `Task function for ${input.name} is not a function`,
+            );
+          }
+
+          console.log("initializing stagehand for", input);
+          const { stagehand, initResponse } = await initStagehand({
+            modelName: input.input.modelName,
+            logger,
           });
-          return result;
-        },
-        customScores: [],
-        maxConcurrency: MAX_CONCURRENCY,
-        trialCount: TRIAL_COUNT,
-      });
-    } else {
-      // Run the evaluations with the braintrust Eval function
-      evalResult = await Eval(braintrustProjectName, {
-        experimentName,
-        data: generateFilteredTestcases,
-        // Each test is a function that runs the corresponding task module
-        task: (input) => runTask(input),
-        // Use the scoring functions defined above
-        scores: [exactMatch, errorMatch],
-        maxConcurrency: MAX_CONCURRENCY,
-        trialCount: TRIAL_COUNT,
-      });
-    }
+
+          const { debugUrl, sessionUrl, connectUrl } = initResponse;
+
+          console.log("connecting to", connectUrl);
+
+          const platoSim = await plato.startSimulation(input, {
+            cdpUrl: connectUrl,
+          });
+
+          // Execute the task
+          const result = await taskFunction({
+            platoSim,
+            stagehand,
+            logger,
+            useTextExtract,
+            useAccessibilityTree,
+            modelName: input.modelName,
+          });
+
+          // Log result to console
+          if (result && result._success) {
+            console.log(`✅ ${input.name}: Passed`);
+          } else {
+            console.log(`❌ ${input.name}: Failed`);
+          }
+          return {
+            ...result,
+            debugUrl,
+            sessionUrl,
+          };
+        } catch (error) {
+          // Log any errors that occur during task execution
+          console.error(`❌ ${input.name}: Error - ${error}`);
+          logger.error({
+            message: `Error in task ${input.name}`,
+            level: 0,
+            auxiliary: {
+              error: {
+                value: error.message,
+                type: "object",
+              },
+              trace: {
+                value: error.stack,
+                type: "string",
+              },
+            },
+          });
+          return {
+            _success: false,
+            error: JSON.parse(JSON.stringify(error, null, 2)),
+            logs: logger.getLogs(),
+          };
+        }
+      },
+      customScores: [],
+      maxConcurrency: MAX_CONCURRENCY,
+      trialCount: TRIAL_COUNT,
+    });
 
     // Map results to the SummaryResult format
     const summaryResults: SummaryResult[] = (evalResult?.results || []).map(

@@ -1,24 +1,14 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
+
 import { normalizeString } from "@/evals/utils";
 import { z } from "zod";
 
 export const extract_resistor_info: EvalFunction = async ({
+  stagehand,
   modelName,
   logger,
   useTextExtract,
-  configOverrides,
 }) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
   await stagehand.page.goto("https://www.seielect.com/?stockcheck=ASR1JA330R");
 
   const result = await stagehand.page.extract({
@@ -69,8 +59,6 @@ export const extract_resistor_info: EvalFunction = async ({
       _success: false,
       error: "MOQ extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -96,8 +84,6 @@ export const extract_resistor_info: EvalFunction = async ({
       _success: false,
       error: "Tolerance percentage extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -120,8 +106,6 @@ export const extract_resistor_info: EvalFunction = async ({
       _success: false,
       error: "Ohmic value extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
@@ -147,15 +131,11 @@ export const extract_resistor_info: EvalFunction = async ({
       _success: false,
       error: "Operating temperature range extracted does not match expected",
       logs: logger.getLogs(),
-      debugUrl,
-      sessionUrl,
     };
   }
 
   return {
     _success: true,
     logs: logger.getLogs(),
-    debugUrl,
-    sessionUrl,
   };
 };

@@ -7,7 +7,7 @@ import { AvailableModel, ClientOptions } from "./model";
 import { LLMClient } from "../lib/llm/LLMClient";
 
 export interface ConstructorParams {
-  env: "LOCAL" | "BROWSERBASE" | "REMOTE";
+  env: "LOCAL" | "BROWSERBASE";
   apiKey?: string;
   projectId?: string;
   verbose?: 0 | 1 | 2;
@@ -26,7 +26,6 @@ export interface ConstructorParams {
    * Instructions for stagehand.
    */
   systemPrompt?: string;
-  cdpUrl?: string;
 }
 
 export interface InitOptions {
@@ -42,6 +41,7 @@ export interface InitResult {
   debugUrl: string;
   sessionUrl: string;
   sessionId: string;
+  connectUrl: string;
 }
 
 export interface InitFromPageOptions {

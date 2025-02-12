@@ -1,21 +1,6 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
-export const rakuten_jp: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const rakuten_jp: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://www.rakuten.co.jp/");
   await stagehand.page.act({ action: "click on online supermarket" });
 
@@ -35,8 +20,7 @@ export const rakuten_jp: EvalFunction = async ({
 
   return {
     _success: url === successUrl,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };

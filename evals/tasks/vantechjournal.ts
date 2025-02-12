@@ -1,21 +1,6 @@
 import { EvalFunction } from "@/types/evals";
-import { initStagehand } from "@/evals/initStagehand";
 
-export const vantechjournal: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const vantechjournal: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://vantechjournal.com/");
 
   await stagehand.page.act({
@@ -31,8 +16,7 @@ export const vantechjournal: EvalFunction = async ({
     _success: currentUrl === expectedUrl,
     currentUrl,
     expectedUrl,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };

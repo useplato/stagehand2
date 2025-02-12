@@ -1,21 +1,6 @@
-import { initStagehand } from "@/evals/initStagehand";
 import { EvalFunction } from "@/types/evals";
 
-export const ionwave_observe: EvalFunction = async ({
-  modelName,
-  logger,
-  configOverrides,
-}) => {
-  const { stagehand, initResponse } = await initStagehand({
-    modelName,
-    logger,
-    configOverrides: {
-      ...configOverrides,
-    },
-  });
-
-  const { debugUrl, sessionUrl } = initResponse;
-
+export const ionwave_observe: EvalFunction = async ({ stagehand, logger }) => {
   await stagehand.page.goto("https://elpasotexas.ionwave.net/Login.aspx");
 
   const observations = await stagehand.page.observe({ onlyVisible: true });
@@ -25,8 +10,7 @@ export const ionwave_observe: EvalFunction = async ({
     return {
       _success: false,
       observations,
-      debugUrl,
-      sessionUrl,
+
       logs: logger.getLogs(),
     };
   }
@@ -65,8 +49,7 @@ export const ionwave_observe: EvalFunction = async ({
     _success: foundMatch,
     expected: expectedResult,
     observations,
-    debugUrl,
-    sessionUrl,
+
     logs: logger.getLogs(),
   };
 };
