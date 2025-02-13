@@ -8,8 +8,8 @@ import path from "path";
 import { z } from "zod";
 import { BrowserResult } from "../types/browser";
 import { LogLine } from "../types/log";
+import { BrowserContext, Page } from "../types/page";
 import { GotoOptions } from "../types/playwright";
-import { Page, BrowserContext } from "../types/page";
 import {
   ActOptions,
   ActResult,
@@ -26,9 +26,9 @@ import {
 import { scriptContent } from "./dom/build/scriptContent";
 import { LLMClient } from "./llm/LLMClient";
 import { LLMProvider } from "./llm/LLMProvider";
-import { logLineToString } from "./utils";
-import { StagehandPage } from "./StagehandPage";
 import { StagehandContext } from "./StagehandContext";
+import { StagehandPage } from "./StagehandPage";
+import { logLineToString } from "./utils";
 
 dotenv.config({ path: ".env" });
 
@@ -206,7 +206,7 @@ async function getBrowser(
   } else {
     logger({
       category: "init",
-      message: "launching local browser",
+      message: "launching local browserrrr",
       level: 0,
       auxiliary: {
         headless: {
@@ -261,9 +261,10 @@ async function getBrowser(
       },
     );
 
+
     logger({
-      category: "init",
-      message: "local browser started successfully.",
+      category: "BRODDYYY",
+      message: "local browser started SUCCESSSSS. CDP URL: ",
     });
 
     await applyStealthScripts(context);
@@ -639,7 +640,8 @@ export class Stagehand {
 export * from "../types/browser";
 export * from "../types/log";
 export * from "../types/model";
+export * from "../types/page";
 export * from "../types/playwright";
 export * from "../types/stagehand";
-export * from "../types/page";
 export * from "./llm/LLMClient";
+
